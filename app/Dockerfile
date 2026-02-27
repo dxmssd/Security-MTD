@@ -16,18 +16,19 @@ WORKDIR /app
 
 #we copy what is neccesary from the previous stage
 COPY --from=builder /root/.local /home/mtd_user/.local
+WORKDIR /app
 COPY . .
 
 #mtd_ser is the absolte owner of everything inside the /app folder
-RUN chown -R mtd_user:mtd_user /app #
-USER mtd_user
+RUN chown -R mtd_user:mtd_user /app /home/mtd_user/.local
+
 
 # Variables that ArgoCD/Kubernetes will inject to scale
 ENV PATH=/home/mtd_user/.local/bin:$PATH \
-    PYTHONUNBUFFERED=1 \
-    APP_PORT=8080 \
-    MTD_ROTATION_ID=initial_state
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1
 
+USER mtd_user
 
 EXPOSE 8080
 

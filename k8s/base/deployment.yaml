@@ -1,0 +1,22 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mtd-app-deployment
+  labels:
+    app: mtd-app
+    tenant: client-001 # client code
+spec:
+  replicas: 2 # immediate scalability: if more is needed, simply increase the number
+  selector:
+    matchLabels:
+      app: mtd-app
+  template:
+    metadata:
+      labels:
+        app: mtd-app
+    spec:
+      containers:
+        - name: mtd-container
+          image : ghcr.io/dxmssd/Security-MTD/mtd-app:latest
+          imagePullPolicy: Always

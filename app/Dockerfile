@@ -24,7 +24,7 @@ RUN chown -R mtd_user:mtd_user /app /home/mtd_user/.local
 # Variables that ArgoCD/Kubernetes will inject to scale
 ENV PATH=/home/mtd_user/.local/bin:$PATH \
     PYTHONPATH="/app" \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
     PATH="/home/mtd_user/.local/bin:${PATH}"
 
 USER mtd_user

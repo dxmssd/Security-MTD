@@ -98,6 +98,22 @@ resource "azurerm_network_security_rule" "honeypot_ssh_rule" {
   network_security_group_name = azurerm_network_security_group.honeypot_nsg.name
 }
 
+#NODEPORT UTILIZAR MIENTRAS ESTE EN DESARROLLO LUEGO CAMBIAR A LOADBALANCER
+resource "azurerm_network_security_rule" "allow_nodeport" {
+  name                        = "K8s-NodePort-Dev"
+  priority                    = 110                  
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Tcp"
+  source_port_range           = "*"
+  destination_port_range      = "30080"             
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = azurerm_resource_group.honeypot_rg.name
+  network_security_group_name = azurerm_network_security_group.honeypot_nsg.name
+}
+
+
 resource "azurerm_network_interface" "honeypot_nic" {
   name                = "HoneypotNIC"
   location            = azurerm_resource_group.honeypot_rg.location

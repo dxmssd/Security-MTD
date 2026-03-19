@@ -1,33 +1,42 @@
 #===== The builder ======
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim-bookworm as builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+COPY app/requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
 WORKDIR /app
 
 #===== Install dependence ====
-COPY app/requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 
 #===== Runtime =========
 FROM python:3.11-slim-bookworm
 #==== Users privileges ====
-RUN groupadd -r mtd_user && useradd -r -g mtd_user mtd_user
+FROM gcr.io/distroless/python3-debian12:nonroot
 WORKDIR /app
 
-#we copy what is neccesary from the previous stage
-COPY --from=builder /root/.local /home/mtd_user/.local
+#copy librery from builder 
+COPY --from=builder /install /usr/local
 COPY app/ .
 
-#mtd_ser is the absolte owner of everything inside the /app folder
-RUN chown -R mtd_user:mtd_user /app /home/mtd_user/.local
-
-
-# Variables that ArgoCD/Kubernetes will inject to scale
-ENV PYTHONPATH="/app" \
+#variable for python 
+ENV PYTHONPATH="/usr/local/lib/python3.11/site-packages" \
     PYTHONUNBUFFERED=1 \
-    PATH="/home/mtd_user/.local/bin:${PATH}"
+    PATH="/usr/local/bin:${PATH}"
 
-USER mtd_user
+
+# distrolles user is nonroot
+user nonroot
+
+
+
 EXPOSE 8080
 
 # Guinicorn server for scaling
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
+ENTRYPOINT ["python", "-m", "gunicorn", "--bind", "0.0.0.0:8080", "app:app"]

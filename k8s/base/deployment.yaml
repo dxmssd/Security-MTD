@@ -1,31 +1,51 @@
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mtd-app-deployment
+  name: ghost-node
   labels:
-    app: mtd-app
-    tenant: client-001 # client code
+    app: mtd
 spec:
-  replicas: 2 # immediate scalability: if more is needed, simply increase the number
+  replicas: 2 # Alta disponibilidad: siempre 2 "fantasmas" activos
   selector:
     matchLabels:
-      app: mtd-app
+      app: mtd
   template:
     metadata:
       labels:
-        app: mtd-app
+        app: mtd
     spec:
       containers:
-      - name: mtd-container
-        image: ghcr.io/dxmssd/security-mtd:latest
-        imagePullPolicy: Always
+      - name: ghost-app
+        image: tu-registro.azurecr.io/ghost-node:v1 # Tu imagen Distroless
         ports:
         - containerPort: 8080
+        
+        # --- Seguridad: No permitir privilegios ---
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532 # Usuario default de Distroless
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true # Máximo Hardening
+          
+        # --- Recursos: Control de costos ---
         resources:
           limits:
-            memory: "128Mi"
             cpu: "500m"
-      imagePullSecrets:
-      - name: ghcr-auth
-        
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+
+        # --- Health Checks: Conectados con app.py ---
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5

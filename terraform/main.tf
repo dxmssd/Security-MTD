@@ -47,6 +47,49 @@ resource "azurerm_resource_group" "honeypot_rg" {
   location = "East US 2"
 }
 
+
+resource "azurerm_container_registry" "acr" {
+  name                = "acrghostnodemtd${random_id.server_suffix.hex}"
+  # CAMBIA ESTAS DOS LÍNEAS:
+  resource_group_name = azurerm_resource_group.honeypot_rg.name
+  location            = azurerm_resource_group.honeypot_rg.location
+  
+  sku                 = "Basic"
+  admin_enabled       = true
+}
+
+
+resource "azurerm_role_assignment" "aks_to_acr" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+}
+
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = "aks-mtd-${random_id.server_suffix.hex}"
+  location            = azurerm_resource_group.honeypot_rg.location
+  resource_group_name = azurerm_resource_group.honeypot_rg.name
+  dns_prefix          = "mtd-aks"
+  kubernetes_version  = "1.34" #buscar la mas nueva si sale error, pero que soporte la capa no premium
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2s"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  network_profile {
+    network_plugin    = "azure"
+    load_balancer_sku = "standard"
+  }
+}
+
+
+
 # ============================================================================
 # 3. NETWORKING
 # ============================================================================
@@ -254,46 +297,3 @@ output "current_mtd_port" {
   value = var.mtd_active_ports
 }
 
-
-
-
-
-
-
-resource "azurerm_container_registry" "acr" {
-  name                = "acrGhostNodeProd"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
-  sku                 = "Basic" 
-  admin_enabled       = false
-}
-
-
-resource "azurerm_role_assignment" "aks_to_acr" {
-  scope                = azurerm_container_registry.acr.id
-  role_definition_name = "AcrPull"
-  principal_id         = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
-}
-
-resource "azurerm_kubernetes_cluster" "aks" {
-  name                = "aks-mtd-${random_id.server_suffix.hex}"
-  location            = azurerm_resource_group.honeypot_rg.location
-  resource_group_name = azurerm_resource_group.honeypot_rg.name
-  dns_prefix          = "mtd-aks"
-  kubernetes_version  = "1.27"
-
-  default_node_pool {
-    name       = "default"
-    node_count = 1
-    vm_size    = "Standard_B2s"
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  network_profile {
-    network_plugin    = "azure"
-    load_balancer_sku = "standard"
-  }
-}
